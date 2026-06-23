@@ -1,15 +1,17 @@
 # MinimalNotes
 
+![MinimalNotes](ScreenShot.JPG)
+
 A minimal always-on-screen note app built with Electron, with Claude Code assistant.
 
 One window, one note. It saves automatically as you type and remembers where you left it.
 
 ## Features
 
-- Auto-saves with 800ms debounce (atomic write — no data loss)
+- Auto-saves (atomic write — no data loss)
 - Remembers window position and size between sessions
 - "Pin" button to toggle always-on-top (persists across restarts)
-- Launches at system startup automatically
+- Launches at system startup automatically (hopefully)
 - Note is stored as plain `note.txt` — readable and editable outside the app
 
 ## Usage
