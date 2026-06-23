@@ -1,6 +1,6 @@
 # MinimalNotes
 
-A minimal always-on-screen note app built with Electron.
+A minimal always-on-screen note app built with Electron, with Claude Code assistant.
 
 One window, one note. It saves automatically as you type and remembers where you left it.
 
