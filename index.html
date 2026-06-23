@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minimal Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #0f0f0f;
+      color: #c8c8c8;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Menlo', monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #titlebar {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px 0 14px;
+      background: #0f0f0f;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+    }
+
+    #app-name {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: #444;
+      text-transform: lowercase;
+    }
+
+    #titlebar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    #pin-btn {
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid #2a2a2a;
+      background: transparent;
+      color: #555;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      text-transform: lowercase;
+    }
+
+    #pin-btn:hover { color: #888; border-color: #444; }
+    #pin-btn.active { color: #a0c4ff; border-color: #2a4a7f; background: #0d1a2e; }
+
+    .win-btn {
+      width: 26px;
+      height: 20px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: #444;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, color 0.1s;
+    }
+    .win-btn:hover { background: #1e1e1e; color: #aaa; }
+    #close-btn:hover { background: #5a1010; color: #ff8080; }
+
+    #editor-wrap {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 32px);
+      position: relative;
+    }
+
+    #note {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: none;
+      outline: none;
+      background: #0f0f0f;
+      color: #c8c8c8;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 16px 18px;
+      caret-color: #a0c4ff;
+      -webkit-app-region: no-drag;
+      user-select: text;
+    }
+
+    #note::placeholder { color: #2a2a2a; }
+    #note::-webkit-scrollbar { width: 6px; }
+    #note::-webkit-scrollbar-track { background: transparent; }
+    #note::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+    #note::-webkit-scrollbar-thumb:hover { background: #333; }
+
+    #status {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      transition: color 0.3s;
+    }
+
+    #status.saving { color: #555; }
+    #status.saved  { color: #2d6a2d; }
+    #status.error  { color: #8b2020; }
+  </style>
+</head>
+<body>
+  <div id="titlebar">
+    <span id="app-name">Minimal Notes</span>
+    <div id="titlebar-right">
+      <button id="pin-btn" title="Toggle always on top">pin</button>
+      <button class="win-btn" id="min-btn" title="Minimize">&#8211;</button>
+      <button class="win-btn" id="max-btn" title="Maximize">&#9633;</button>
+      <button class="win-btn" id="close-btn" title="Close">&#10005;</button>
+    </div>
+  </div>
+
+  <div id="editor-wrap">
+    <textarea id="note" placeholder="start typing…" spellcheck="false"></textarea>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const note   = document.getElementById('note');
+    const status = document.getElementById('status');
+    const pinBtn = document.getElementById('pin-btn');
+
+    let debounceTimer = null;
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function timeStr() {
+      const d = new Date();
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function setStatus(state, time) {
+      status.className = state;
+      if (state === 'saving') status.textContent = 'saving…';
+      else if (state === 'saved') status.textContent = `saved ${time}`;
+      else if (state === 'error') status.textContent = 'error saving';
+      else status.textContent = '';
+    }
+
+    async function save() {
+      setStatus('saving');
+      const t = timeStr();
+      const result = await window.api.writeNote(note.value);
+      if (result && result.ok === false) setStatus('error');
+      else setStatus('saved', t);
+    }
+
+    note.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(save, 800);
+    });
+
+    // Init
+    (async () => {
+      const content = await window.api.readNote();
+      note.value = content;
+      note.focus();
+      note.setSelectionRange(note.value.length, note.value.length);
+
+      const pinned = await window.api.getAlwaysOnTop();
+      pinBtn.classList.toggle('active', pinned);
+    })();
+
+    pinBtn.addEventListener('click', async () => {
+      const pinned = await window.api.toggleAlwaysOnTop();
+      pinBtn.classList.toggle('active', pinned);
+    });
+
+    document.getElementById('min-btn').addEventListener('click', () => window.api.minimize());
+    document.getElementById('max-btn').addEventListener('click', () => window.api.maximize());
+    document.getElementById('close-btn').addEventListener('click', () => window.api.close());
+  </script>
+</body>
+</html>
