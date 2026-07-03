@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -29,6 +29,9 @@ function ensureNote() {
 }
 
 function setupAutostart() {
+  // In dev, app.getPath('exe') is the Electron binary in node_modules —
+  // registering it as a login item would be wrong.
+  if (!app.isPackaged) return;
   if (process.platform === 'darwin' || process.platform === 'win32') {
     app.setLoginItemSettings({ openAtLogin: true, path: app.getPath('exe') });
   } else if (process.platform === 'linux') {
@@ -78,10 +81,24 @@ Categories=Utility;
 
 let win;
 
+function boundsVisible(b) {
+  return screen.getAllDisplays().some((d) => {
+    const a = d.workArea;
+    return b.x < a.x + a.width && b.x + b.width > a.x &&
+           b.y < a.y + a.height && b.y + b.height > a.y;
+  });
+}
+
 function createWindow() {
   const config = readConfig();
   const bounds = config.bounds || { width: 600, height: 400 };
   const alwaysOnTop = config.alwaysOnTop || false;
+
+  // Drop saved position if it's off every current display (e.g. monitor unplugged)
+  if (bounds.x !== undefined && !boundsVisible(bounds)) {
+    delete bounds.x;
+    delete bounds.y;
+  }
 
   win = new BrowserWindow({
     width: bounds.width,
@@ -104,9 +121,13 @@ function createWindow() {
   win.loadFile('index.html');
 
   win.on('close', () => {
-    const b = win.getBounds();
+    const b = win.getNormalBounds();
     const current = readConfig();
     writeConfig({ ...current, bounds: b });
+  });
+
+  win.on('closed', () => {
+    win = null;
   });
 }
 
@@ -136,7 +157,7 @@ ipcMain.handle('read-note', () => {
   }
 });
 
-ipcMain.handle('write-note', (_event, content) => {
+function saveNote(content) {
   const tmpPath = NOTE_PATH + '.tmp';
   try {
     fs.writeFileSync(tmpPath, content, 'utf8');
@@ -146,6 +167,14 @@ ipcMain.handle('write-note', (_event, content) => {
     try { fs.unlinkSync(tmpPath); } catch {}
     return { ok: false, error: e.message };
   }
+}
+
+ipcMain.handle('write-note', (_event, content) => saveNote(content));
+
+// Synchronous flush used by the renderer's beforeunload, so a pending
+// debounced save isn't lost when the window closes or the app quits.
+ipcMain.on('write-note-sync', (event, content) => {
+  event.returnValue = saveNote(content);
 });
 
 ipcMain.handle('toggle-always-on-top', () => {

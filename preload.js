@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   readNote: () => ipcRenderer.invoke('read-note'),
   writeNote: (content) => ipcRenderer.invoke('write-note', content),
+  writeNoteSync: (content) => ipcRenderer.sendSync('write-note-sync', content),
   toggleAlwaysOnTop: () => ipcRenderer.invoke('toggle-always-on-top'),
   getAlwaysOnTop: () => ipcRenderer.invoke('get-always-on-top'),
   minimize: () => ipcRenderer.invoke('window-minimize'),

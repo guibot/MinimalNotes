@@ -12,18 +12,20 @@
     "electron-builder": "^24.0.0"
   },
   "build": {
-    "appId": "com.personal.context-note",
-    "productName": "MinimalNotes",
+    "appId": "com.personal.flashnote",
+    "productName": "FlashNote",
     "icon": "icon.ico",
     "files": [
       "main.js",
       "preload.js",
+      "renderer.js",
       "index.html",
       "icon.png",
       "icon.ico"
     ],
     "mac": {
       "target": "dmg",
+      "icon": "flashnotes.icns",
       "category": "public.app-category.productivity"
     },
     "linux": {

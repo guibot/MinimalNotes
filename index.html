@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minimal Notes</title>
+  <title>FlashNote</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -20,15 +22,18 @@
       height: 32px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
       padding: 0 10px 0 14px;
       background: #0f0f0f;
       -webkit-app-region: drag;
       border-bottom: 1px solid #1e1e1e;
       flex-shrink: 0;
+      position: relative;
     }
 
     #app-name {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 11px;
       letter-spacing: 0.08em;
       color: #444;
@@ -39,6 +44,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      margin-left: auto;
       -webkit-app-region: no-drag;
     }
 
@@ -123,7 +129,7 @@
 </head>
 <body>
   <div id="titlebar">
-    <span id="app-name">Minimal Notes</span>
+    <span id="app-name">FlashNote</span>
     <div id="titlebar-right">
       <button id="pin-btn" title="Toggle always on top">pin</button>
       <button class="win-btn" id="min-btn" title="Minimize">&#8211;</button>
@@ -137,59 +143,6 @@
     <div id="status"></div>
   </div>
 
-  <script>
-    const note   = document.getElementById('note');
-    const status = document.getElementById('status');
-    const pinBtn = document.getElementById('pin-btn');
-
-    let debounceTimer = null;
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function timeStr() {
-      const d = new Date();
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
-    function setStatus(state, time) {
-      status.className = state;
-      if (state === 'saving') status.textContent = 'saving…';
-      else if (state === 'saved') status.textContent = `saved ${time}`;
-      else if (state === 'error') status.textContent = 'error saving';
-      else status.textContent = '';
-    }
-
-    async function save() {
-      setStatus('saving');
-      const t = timeStr();
-      const result = await window.api.writeNote(note.value);
-      if (result && result.ok === false) setStatus('error');
-      else setStatus('saved', t);
-    }
-
-    note.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(save, 800);
-    });
-
-    // Init
-    (async () => {
-      const content = await window.api.readNote();
-      note.value = content;
-      note.focus();
-      note.setSelectionRange(note.value.length, note.value.length);
-
-      const pinned = await window.api.getAlwaysOnTop();
-      pinBtn.classList.toggle('active', pinned);
-    })();
-
-    pinBtn.addEventListener('click', async () => {
-      const pinned = await window.api.toggleAlwaysOnTop();
-      pinBtn.classList.toggle('active', pinned);
-    });
-
-    document.getElementById('min-btn').addEventListener('click', () => window.api.minimize());
-    document.getElementById('max-btn').addEventListener('click', () => window.api.maximize());
-    document.getElementById('close-btn').addEventListener('click', () => window.api.close());
-  </script>
+  <script src="renderer.js"></script>
 </body>
 </html>
