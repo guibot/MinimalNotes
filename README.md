@@ -1,6 +1,6 @@
-# MinimalNotes
+# FlashNote
 
-![MinimalNotes](ScreenShot.JPG)
+![FlashNote](ScreenShot.JPG)
 
 A minimal always-on-screen note app built with Electron, with Claude Code assistant.
 
@@ -8,10 +8,10 @@ One window, one note. It saves automatically as you type and remembers where you
 
 ## Features
 
-- Auto-saves (atomic write — no data loss)
-- Remembers window position and size between sessions
+- Auto-saves (atomic write — no data loss, flushed on close even mid-debounce)
+- Remembers window position and size between sessions (falls back to default if off-screen)
 - "Pin" button to toggle always-on-top (persists across restarts)
-- Launches at system startup automatically (hopefully)
+- Launches at system startup automatically once installed (not in dev mode)
 - Note is stored as plain `note.txt` — readable and editable outside the app
 
 ## Usage
@@ -34,14 +34,14 @@ Output goes to `dist/`.
 
 ### Windows
 
-- Produces a `MinimalNotes Setup x.x.x.exe` installer
+- Produces a `FlashNote Setup x.x.x.exe` installer
 - Requires an `icon.ico` file in the project root for the app icon
 - If the build fails with a symlink error, enable **Developer Mode**: Settings → System → For developers → Developer Mode
 
 ### macOS
 
 - Produces a `.dmg` file
-- Requires an `icon.icns` file in the project root for the app icon
+- Requires a `flashnotes.icns` file in the project root for the app icon
 - To build a signed app you need an Apple Developer certificate; for personal use you can skip signing
 
 ### Linux
@@ -50,8 +50,8 @@ Output goes to `dist/`.
 - Requires `icon.png` (256×256 or larger) in the project root
 - Make the AppImage executable after download:
   ```bash
-  chmod +x MinimalNotes*.AppImage
-  ./MinimalNotes*.AppImage
+  chmod +x FlashNote*.AppImage
+  ./FlashNote*.AppImage
   ```
 - For autostart, the app creates `~/.config/autostart/context-note.desktop` automatically on first run
 
@@ -62,25 +62,25 @@ Output goes to `dist/`.
 Run this in a terminal (adjust the path if needed):
 
 ```bat
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "MinimalNotes" /t REG_SZ /d "\"C:\Users\%USERNAME%\AppData\Local\Programs\MinimalNotes\MinimalNotes.exe\"" /f
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "FlashNote" /t REG_SZ /d "\"C:\Users\%USERNAME%\AppData\Local\Programs\FlashNote\FlashNote.exe\"" /f
 ```
 
 To remove it:
 
 ```bat
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "MinimalNotes" /f
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "FlashNote" /f
 ```
 
 ### macOS
 
 ```bash
-osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/MinimalNotes.app", hidden:false}'
+osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/FlashNote.app", hidden:false}'
 ```
 
 To remove it:
 
 ```bash
-osascript -e 'tell application "System Events" to delete login item "MinimalNotes"'
+osascript -e 'tell application "System Events" to delete login item "FlashNote"'
 ```
 
 ### Linux
@@ -89,20 +89,20 @@ Create the autostart entry manually:
 
 ```bash
 mkdir -p ~/.config/autostart
-cat > ~/.config/autostart/minimalnotes.desktop << EOF
+cat > ~/.config/autostart/flashnote.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=MinimalNotes
-Exec=/path/to/MinimalNotes.AppImage
+Name=FlashNote
+Exec=/path/to/FlashNote.AppImage
 Hidden=false
 X-GNOME-Autostart-enabled=true
 EOF
 ```
 
-Replace `/path/to/MinimalNotes.AppImage` with the actual path to your AppImage. To remove it:
+Replace `/path/to/FlashNote.AppImage` with the actual path to your AppImage. To remove it:
 
 ```bash
-rm ~/.config/autostart/minimalnotes.desktop
+rm ~/.config/autostart/flashnote.desktop
 ```
 
 ## Files
@@ -111,5 +111,6 @@ rm ~/.config/autostart/minimalnotes.desktop
 |---|---|
 | `main.js` | Electron main process — window, IPC, config persistence |
 | `preload.js` | Secure bridge between main and renderer |
-| `index.html` | The entire UI |
+| `index.html` | The UI markup and styles |
+| `renderer.js` | UI logic — editor, save debounce, window controls |
 | `note.txt` | Your note, plain text |
