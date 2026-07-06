@@ -81,10 +81,74 @@
     .win-btn:hover { background: #1e1e1e; color: #aaa; }
     #close-btn:hover { background: #5a1010; color: #ff8080; }
 
+    #tabbar {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      background: #0f0f0f;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+      -webkit-app-region: no-drag;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      color: #555;
+      font-size: 11px;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .tab:hover { color: #888; border-color: #2a2a2a; }
+    .tab.active { color: #a0c4ff; border-color: #2a4a7f; background: #0d1a2e; }
+
+    .tab-close {
+      font-size: 11px;
+      line-height: 1;
+      color: #444;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    .tab-close:hover { color: #ff8080; background: #5a1010; }
+
+    #tabbar-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #expand-btn, #add-tab-btn {
+      width: 18px;
+      height: 18px;
+      border: 1px solid #2a2a2a;
+      border-radius: 3px;
+      background: transparent;
+      color: #555;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #expand-btn:hover, #add-tab-btn:hover { color: #888; border-color: #444; }
+    #expand-btn.active { color: #a0c4ff; border-color: #2a4a7f; background: #0d1a2e; }
+    #add-tab-btn:disabled { opacity: 0.3; cursor: default; }
+    #add-tab-btn:disabled:hover { color: #555; border-color: #2a2a2a; }
+
     #editor-wrap {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 32px);
+      height: calc(100vh - 32px - 26px);
       position: relative;
     }
 
@@ -110,6 +174,47 @@
     #note::-webkit-scrollbar-track { background: transparent; }
     #note::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
     #note::-webkit-scrollbar-thumb:hover { background: #333; }
+
+    #split-container {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .split-col {
+      display: flex;
+      flex-direction: column;
+      min-width: 80px;
+      height: 100%;
+    }
+
+    .split-col textarea {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: none;
+      outline: none;
+      background: #0f0f0f;
+      color: #c8c8c8;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 16px 18px;
+      caret-color: #a0c4ff;
+      -webkit-app-region: no-drag;
+      user-select: text;
+    }
+
+    .split-col textarea::placeholder { color: #2a2a2a; }
+
+    .split-resizer {
+      width: 4px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: #1e1e1e;
+    }
+
+    .split-resizer:hover, .split-resizer.dragging { background: #444; }
 
     #status {
       position: absolute;
@@ -138,8 +243,16 @@
     </div>
   </div>
 
+  <div id="tabbar">
+    <div id="tabbar-actions">
+      <button id="expand-btn" title="Toggle split view">&#8596;</button>
+      <button id="add-tab-btn" title="New tab">+</button>
+    </div>
+  </div>
+
   <div id="editor-wrap">
     <textarea id="note" placeholder="start typing…" spellcheck="false"></textarea>
+    <div id="split-container"></div>
     <div id="status"></div>
   </div>
 

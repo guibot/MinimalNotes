@@ -3,10 +3,13 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-let NOTE_PATH, CONFIG_PATH;
+const MAX_TABS = 5;
+
+let NOTE_PATH, NOTES_PATH, CONFIG_PATH;
 
 function initPaths() {
   NOTE_PATH = path.join(app.getPath('userData'), 'note.txt');
+  NOTES_PATH = path.join(app.getPath('userData'), 'notes.json');
   CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 }
 
@@ -22,10 +25,21 @@ function writeConfig(data) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2));
 }
 
-function ensureNote() {
-  if (!fs.existsSync(NOTE_PATH)) {
-    fs.writeFileSync(NOTE_PATH, '', 'utf8');
-  }
+function readNotes() {
+  try {
+    const notes = JSON.parse(fs.readFileSync(NOTES_PATH, 'utf8'));
+    if (Array.isArray(notes) && notes.length > 0) return notes;
+  } catch {}
+  // Migrate legacy single-note file into tab 0.
+  let legacy = '';
+  try { legacy = fs.readFileSync(NOTE_PATH, 'utf8'); } catch {}
+  return [legacy];
+}
+
+function writeNotes(notes) {
+  const tmpPath = NOTES_PATH + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(notes), 'utf8');
+  fs.renameSync(tmpPath, NOTES_PATH);
 }
 
 function setupAutostart() {
@@ -133,7 +147,6 @@ function createWindow() {
 
 app.whenReady().then(() => {
   initPaths();
-  ensureNote();
   setupAutostart();
   if (process.platform === 'linux') createLinuxDesktopShortcut();
   createWindow();
@@ -149,32 +162,71 @@ app.on('window-all-closed', () => {
 
 // IPC handlers
 
-ipcMain.handle('read-note', () => {
-  try {
-    return fs.readFileSync(NOTE_PATH, 'utf8');
-  } catch {
-    return '';
-  }
+ipcMain.handle('read-notes', () => {
+  const config = readConfig();
+  const notes = readNotes();
+  const activeTab = Math.min(config.activeTab || 0, notes.length - 1);
+  return { notes, activeTab };
 });
 
-function saveNote(content) {
-  const tmpPath = NOTE_PATH + '.tmp';
+function saveNoteAt(idx, content) {
   try {
-    fs.writeFileSync(tmpPath, content, 'utf8');
-    fs.renameSync(tmpPath, NOTE_PATH);
+    const notes = readNotes();
+    notes[idx] = content;
+    writeNotes(notes);
     return { ok: true };
   } catch (e) {
-    try { fs.unlinkSync(tmpPath); } catch {}
     return { ok: false, error: e.message };
   }
 }
 
-ipcMain.handle('write-note', (_event, content) => saveNote(content));
+ipcMain.handle('write-note', (_event, idx, content) => saveNoteAt(idx, content));
 
 // Synchronous flush used by the renderer's beforeunload, so a pending
 // debounced save isn't lost when the window closes or the app quits.
-ipcMain.on('write-note-sync', (event, content) => {
-  event.returnValue = saveNote(content);
+ipcMain.on('write-note-sync', (event, idx, content) => {
+  event.returnValue = saveNoteAt(idx, content);
+});
+
+ipcMain.handle('add-tab', () => {
+  const notes = readNotes();
+  if (notes.length >= MAX_TABS) return { ok: false, notes };
+  notes.push('');
+  writeNotes(notes);
+  return { ok: true, notes };
+});
+
+ipcMain.handle('remove-tab', (_event, idx) => {
+  const notes = readNotes();
+  if (idx === 0 || idx >= notes.length) return { ok: false, notes };
+  notes.splice(idx, 1);
+  writeNotes(notes);
+  return { ok: true, notes };
+});
+
+ipcMain.handle('set-active-tab', (_event, idx) => {
+  const current = readConfig();
+  writeConfig({ ...current, activeTab: idx });
+});
+
+ipcMain.handle('get-column-widths', () => {
+  const config = readConfig();
+  return config.columnWidths || [];
+});
+
+ipcMain.handle('set-column-widths', (_event, widths) => {
+  const current = readConfig();
+  writeConfig({ ...current, columnWidths: widths });
+});
+
+ipcMain.handle('get-split-mode', () => {
+  const config = readConfig();
+  return !!config.splitMode;
+});
+
+ipcMain.handle('set-split-mode', (_event, enabled) => {
+  const current = readConfig();
+  writeConfig({ ...current, splitMode: enabled });
 });
 
 ipcMain.handle('toggle-always-on-top', () => {
