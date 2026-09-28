@@ -42,6 +42,12 @@ function writeNotes(notes) {
   fs.renameSync(tmpPath, NOTES_PATH);
 }
 
+// Inside an AppImage, app.getPath('exe') points to a temporary mount that
+// changes every run; APPIMAGE holds the real, stable path to the file.
+function getLaunchPath() {
+  return process.env.APPIMAGE || app.getPath('exe');
+}
+
 function setupAutostart() {
   // In dev, app.getPath('exe') is the Electron binary in node_modules —
   // registering it as a login item would be wrong.
@@ -51,7 +57,7 @@ function setupAutostart() {
   } else if (process.platform === 'linux') {
     const autostartDir = path.join(os.homedir(), '.config', 'autostart');
     const desktopFile = path.join(autostartDir, 'context-note.desktop');
-    const exePath = app.getPath('exe');
+    const exePath = getLaunchPath();
     const desktopEntry = `[Desktop Entry]
 Type=Application
 Name=context
@@ -72,7 +78,7 @@ X-GNOME-Autostart-enabled=true
 function createLinuxDesktopShortcut() {
   const desktopDir = path.join(os.homedir(), 'Desktop');
   const desktopFile = path.join(desktopDir, 'context-note.desktop');
-  const exePath = app.getPath('exe');
+  const exePath = getLaunchPath();
   const iconPath = path.join(__dirname, 'icon.png');
   const entry = `[Desktop Entry]
 Type=Application
